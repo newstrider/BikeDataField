@@ -10,6 +10,7 @@ import Toybox.Lang;
 import Toybox.Time;
 import Toybox.WatchUi;
 import Toybox.FitContributor;
+import Toybox.UserProfile;
 
 class BikeDataField extends WatchUi.DataField {
 
@@ -102,10 +103,16 @@ class BikeDataField extends WatchUi.DataField {
 
         dc.setColor(fgColor, Graphics.COLOR_TRANSPARENT);
 
+        // HR Zone decimal (below HR value)
+        var hrZone = 0.0f;
+        if (_currentHeartRate > 0) {
+            hrZone = computeHrZoneDecimal(_currentHeartRate);
+        }
+
         // Heart Rate (Top Center)
         var hrStr = (_currentHeartRate == 0) ? "--" : _currentHeartRate.format("%d");
         dc.drawText(cx, r1y, smFont, "HEART RATE", Graphics.TEXT_JUSTIFY_CENTER);
-        dc.drawText(cx, r1y + gap, font, hrStr + " bpm", Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(cx, r1y + gap, font, hrStr + " Z" + hrZone.format("%.1f"), Graphics.TEXT_JUSTIFY_CENTER);
 
         // Quadrant 1: Power (Row 1 Left)
         dc.drawText(w * 0.25, r2y, smFont, "Power", Graphics.TEXT_JUSTIFY_CENTER);
@@ -138,5 +145,31 @@ class BikeDataField extends WatchUi.DataField {
 
         dc.drawText(cx, r4y, smFont, "ELAPSED TIME", Graphics.TEXT_JUSTIFY_CENTER);
         dc.drawText(cx, r4y + gap, font, timeStr, Graphics.TEXT_JUSTIFY_CENTER);
+    }
+
+    //! Compute the decimal HR zone (e.g. 2.4 = 40% into Zone 2)
+    private function computeHrZoneDecimal(hr as Number) as Float {
+        var zones = UserProfile.getHeartRateZones(UserProfile.HR_ZONE_SPORT_GENERIC);
+        if (zones == null || zones.size() < 2) {
+            return 0.0f;
+        }
+
+        // HR below the first zone boundary
+        if (hr < (zones[0] as Number)) {
+            return 0.0f;
+        }
+
+        // Find which zone HR falls into
+        for (var i = 0; i < zones.size() - 1; i++) {
+            var lower = zones[i] as Number;
+            var upper = zones[i + 1] as Number;
+            if (hr >= lower && hr < upper) {
+                var fraction = (hr - lower).toFloat() / (upper - lower).toFloat();
+                return (i + 1) + fraction;
+            }
+        }
+
+        // HR at or above the last zone upper bound -> cap at max zone
+        return (zones.size() - 1).toFloat();
     }
 }
