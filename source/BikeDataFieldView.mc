@@ -19,7 +19,7 @@ class BikeDataField extends WatchUi.DataField {
     private var _powerField as FitContributor.Field or Null;
     private var _speedField as FitContributor.Field or Null;
     private var _distanceField as FitContributor.Field or Null;
-    private var _caloriesField as FitContributor.Field or Null;
+    private var _resistanceField as FitContributor.Field or Null;
     private var _currentHeartRate as Number = 0;
 
     //! Constructor
@@ -32,12 +32,12 @@ class BikeDataField extends WatchUi.DataField {
         var dictPower = {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "W", :nativeNum => 7};
         var dictSpeed = {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "m/s", :nativeNum => 73}; // 73 is enhanced_speed
         var dictDistance = {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "m", :nativeNum => 9}; // 9 is distance
-        var dictCalories = {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "kcal", :nativeNum => 11}; // 11 is calories
+        var dictResistance = {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "level"}; 
 
         _powerField = createField("power", 0, FitContributor.DATA_TYPE_SINT16, dictPower);
         _speedField = createField("speed", 1, FitContributor.DATA_TYPE_FLOAT, dictSpeed);
         _distanceField = createField("distance", 2, FitContributor.DATA_TYPE_FLOAT, dictDistance);
-        _caloriesField = createField("calories", 3, FitContributor.DATA_TYPE_UINT16, dictCalories);
+        _resistanceField = createField("resistance", 3, FitContributor.DATA_TYPE_SINT16, dictResistance);
     }
 
     //! Get the information to show in the data field
@@ -57,8 +57,8 @@ class BikeDataField extends WatchUi.DataField {
         if (_distanceField != null) {
             _distanceField.setData(_bleManager.distance.toFloat());
         }
-        if (_caloriesField != null) {
-            _caloriesField.setData(_bleManager.calories);
+        if (_resistanceField != null) {
+            _resistanceField.setData(_bleManager.resistance);
         }
 
         if (info.currentHeartRate != null) {
@@ -120,9 +120,9 @@ class BikeDataField extends WatchUi.DataField {
         dc.drawText(w * 0.25, r3y, smFont, "Distance", Graphics.TEXT_JUSTIFY_CENTER);
         dc.drawText(w * 0.25, r3y + gap, font, distKm.format("%.2f") + " km", Graphics.TEXT_JUSTIFY_CENTER);
 
-        // Quadrant 4: Calories (Row 2 Right)
-        dc.drawText(w * 0.75, r3y, smFont, "Calories", Graphics.TEXT_JUSTIFY_CENTER);
-        dc.drawText(w * 0.75, r3y + gap, font, _bleManager.calories.format("%d") + " cal", Graphics.TEXT_JUSTIFY_CENTER);
+        // Quadrant 4: Resistance (Row 2 Right)
+        dc.drawText(w * 0.75, r3y, smFont, "Resistance", Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(w * 0.75, r3y + gap, font, _bleManager.resistance.format("%d"), Graphics.TEXT_JUSTIFY_CENTER);
 
         // Bottom space: Time
         var timeStr = "0:00";

@@ -15,6 +15,7 @@ class BleManager extends BluetoothLowEnergy.BleDelegate {
     public var speed as Float = 0.0f;
     public var distance as Number = 0;
     public var calories as Number = 0;
+    public var resistance as Number = 0;
     public var elapsedTime as Number = 0;
 
     public function initialize() {
@@ -149,7 +150,12 @@ class BleManager extends BluetoothLowEnergy.BleDelegate {
             }
         }
 
-        if (resistancePresent) { offset += 2; }
+        if (resistancePresent) {
+            if (offset + 2 <= value.size()) {
+                resistance = (value[offset + 1] << 8) | (value[offset] & 0xFF);
+                offset += 2;
+            }
+        }
 
         // Instantaneous Power (sint16, 1 W resolution)
         if (instPowerPresent) {
