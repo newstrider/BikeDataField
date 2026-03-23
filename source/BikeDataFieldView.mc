@@ -16,11 +16,18 @@ class BikeDataField extends WatchUi.DataField {
 
     private var _bleManager as BleManager;
 
-    // FitContributor fields
+    // FitContributor fields (per-record)
     private var _powerField as FitContributor.Field or Null;
     private var _speedField as FitContributor.Field or Null;
     private var _distanceField as FitContributor.Field or Null;
     private var _resistanceField as FitContributor.Field or Null;
+
+    // FitContributor fields (session & lap summaries)
+    private var _distanceSessionField as FitContributor.Field or Null;
+    private var _distanceLapField as FitContributor.Field or Null;
+    private var _speedSessionField as FitContributor.Field or Null;
+    private var _speedLapField as FitContributor.Field or Null;
+
     private var _currentHeartRate as Number = 0;
 
     //! Constructor
@@ -35,10 +42,22 @@ class BikeDataField extends WatchUi.DataField {
         var dictDistance = {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "m", :nativeNum => 9}; // 9 is distance
         var dictResistance = {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "level"}; 
 
+        // Session-level fields (written once when activity is saved)
+        var dictDistanceSession = {:mesgType => FitContributor.MESG_TYPE_SESSION, :units => "m", :nativeNum => 9};
+        var dictDistanceLap = {:mesgType => FitContributor.MESG_TYPE_LAP, :units => "m", :nativeNum => 9};
+        var dictSpeedSession = {:mesgType => FitContributor.MESG_TYPE_SESSION, :units => "m/s", :nativeNum => 73};
+        var dictSpeedLap = {:mesgType => FitContributor.MESG_TYPE_LAP, :units => "m/s", :nativeNum => 73};
+
         _powerField = createField("power", 0, FitContributor.DATA_TYPE_SINT16, dictPower);
         _speedField = createField("speed", 1, FitContributor.DATA_TYPE_FLOAT, dictSpeed);
         _distanceField = createField("distance", 2, FitContributor.DATA_TYPE_FLOAT, dictDistance);
         _resistanceField = createField("resistance", 3, FitContributor.DATA_TYPE_SINT16, dictResistance);
+
+        // Session & lap summary fields
+        _distanceSessionField = createField("total_distance", 4, FitContributor.DATA_TYPE_FLOAT, dictDistanceSession);
+        _distanceLapField = createField("lap_distance", 5, FitContributor.DATA_TYPE_FLOAT, dictDistanceLap);
+        _speedSessionField = createField("avg_speed", 6, FitContributor.DATA_TYPE_FLOAT, dictSpeedSession);
+        _speedLapField = createField("lap_speed", 7, FitContributor.DATA_TYPE_FLOAT, dictSpeedLap);
     }
 
     //! Get the information to show in the data field
@@ -52,14 +71,32 @@ class BikeDataField extends WatchUi.DataField {
             _powerField.setData(_bleManager.power);
         }
         if (_speedField != null) {
-            // Speed from bike is km/h, FIT expects m/s
-            _speedField.setData(_bleManager.speed / 3.6f);
+            // Speed from bike is mph, FIT expects m/s (mph * 0.44704 = m/s)
+            _speedField.setData(_bleManager.speed * 0.44704f);
         }
         if (_distanceField != null) {
-            _distanceField.setData(_bleManager.distance.toFloat());
+            // Distance from bike is in imperial units; convert to meters
+            // (raw / 1000 = miles, so raw * 1.60934 = meters)
+            _distanceField.setData(_bleManager.distance.toFloat() * 1.60934f);
         }
         if (_resistanceField != null) {
             _resistanceField.setData(_bleManager.resistance);
+        }
+
+        // Update session & lap summary fields with latest values
+        var distMeters = _bleManager.distance.toFloat() * 1.60934f;
+        var speedMs = _bleManager.speed * 0.44704f;
+        if (_distanceSessionField != null) {
+            _distanceSessionField.setData(distMeters);
+        }
+        if (_distanceLapField != null) {
+            _distanceLapField.setData(distMeters);
+        }
+        if (_speedSessionField != null) {
+            _speedSessionField.setData(speedMs);
+        }
+        if (_speedLapField != null) {
+            _speedLapField.setData(speedMs);
         }
 
         if (info.currentHeartRate != null) {
@@ -118,12 +155,13 @@ class BikeDataField extends WatchUi.DataField {
         dc.drawText(w * 0.25, r2y, smFont, "Power", Graphics.TEXT_JUSTIFY_CENTER);
         dc.drawText(w * 0.25, r2y + gap, font, _bleManager.power.format("%d") + " W", Graphics.TEXT_JUSTIFY_CENTER);
 
-        // Quadrant 2: Speed (Row 1 Right)
+        // Quadrant 2: Speed (Row 1 Right) - convert mph to kph
+        var speedKph = _bleManager.speed * 1.60934f;
         dc.drawText(w * 0.75, r2y, smFont, "Speed", Graphics.TEXT_JUSTIFY_CENTER);
-        dc.drawText(w * 0.75, r2y + gap, font, _bleManager.speed.format("%.1f") + " kph", Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(w * 0.75, r2y + gap, font, speedKph.format("%.1f") + " kph", Graphics.TEXT_JUSTIFY_CENTER);
 
-        // Quadrant 3: Distance (Row 2 Left)
-        var distKm = _bleManager.distance / 1000.0f;
+        // Quadrant 3: Distance (Row 2 Left) - convert miles to km
+        var distKm = (_bleManager.distance / 1000.0f) * 1.60934f;
         dc.drawText(w * 0.25, r3y, smFont, "Distance", Graphics.TEXT_JUSTIFY_CENTER);
         dc.drawText(w * 0.25, r3y + gap, font, distKm.format("%.2f") + " km", Graphics.TEXT_JUSTIFY_CENTER);
 
